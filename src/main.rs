@@ -33,6 +33,7 @@ impl SquareSet {
     }
 }
 
+// Overloads for basic arithmetic on `SquareSet`s.
 impl std::ops::BitAnd<SquareSet> for SquareSet {
     type Output = SquareSet;
     fn bitand(self, rhs: SquareSet) -> SquareSet {
@@ -64,11 +65,20 @@ impl std::ops::Shr<u32> for SquareSet {
     }
 }
 
+/// A piece type that moves by zero or more "move steps" followed by exactly one "capture step".
+/// This precisely describes the behavior of every chess piece when the piece is allowed to move an
+/// unbounded number of times and then must capture, as in Echo Chess.
+///
+/// (For pieces other than pawns, `move_steps` and `capture_steps` are the same.)
 trait Stepper {
+    /// If a piece is on one of the given squares, which squares can it move to in one step?
     fn move_steps(from: SquareSet) -> SquareSet;
+    /// If a piece is on one of the given squares, which squares can it capture in one step?
     fn capture_steps(from: SquareSet) -> SquareSet;
 }
 
+/// Given that a piece of type `S` is on one of the squares in `from`, and may not move onto or
+/// through the squares in `obstacles`, which of the `targets` can it capture?
 fn captures<S: Stepper>(from: SquareSet, obstacles: SquareSet, targets: SquareSet) -> SquareSet {
     let permeable = !(obstacles | targets);
     let mut reachable = from & permeable;
@@ -159,12 +169,23 @@ enum PieceType {
     Knight,
 }
 
+/// Concise, solver-friendly description of a puzzle with up to 27 pieces.
+///
+/// Pieces in this puzzle are indexed from 0 in order of ascending board location, in rank-major
+/// order. That is, piece A comes before piece B if it is either on a smaller rank (1 is smallest,
+/// 8 is largest), or on the same rank and a smaller file (A is smallest, H is largest).
 #[derive(Debug, Clone)]
 struct Puzzle {
+    /// Which squares have obstacles?
     obstacles: SquareSet,
+    /// Maps piece index (`0..27`) to piece type, or `0xff` if there is no such piece.
     piece_types: [Option<PieceType>; 32],
-    piece_locs: [u8; 32], // maps piece index (0..27) to board square (0..64) or 0xff
-    pieces_by_loc: [u8; 64], // maps board square (0..64) to piece index (0..27) or 0xff
+    /// Maps piece index (`0..27`) to board square (`0..64`), or `0xff` if there is no such piece.
+    piece_locs: [u8; 32],
+    /// Maps board square (`0..64`) to piece index (`0..27`), or `0xff` if there is no piece at
+    /// that location.
+    pieces_by_loc: [u8; 64],
+    /// Which piece (`0..27`) is initially controlled by the player?
     player_start: u32,
 }
 
@@ -178,12 +199,14 @@ struct Puzzle {
 struct PuzzleState(u32);
 
 impl PuzzleState {
+    /// Computes the initial state for a puzzle.
     pub fn initial(p: &Puzzle) -> Self {
         let num_pieces = p.piece_locs.iter().take_while(|z| **z != 0xff).count();
         let to_capture = ((1 << num_pieces) - 1) & !(1 << p.player_start);
         PuzzleState(to_capture | (p.player_start << 27))
     }
 
+    /// Checks whether the player has won: i.e., if all opposing pieces have been captured.
     pub fn done(self) -> bool {
         self.remaining_captures() == 0
     }
@@ -192,6 +215,8 @@ impl PuzzleState {
         self.0 & 0x07ffffff
     }
 
+    /// Calls `consume(piece_idx, next_state)` for each successor state, where `piece_idx`
+    /// (`0..27`) is the index of the piece that can be captured to move to `next_state`.
     pub fn next_states<F: FnMut(u32, PuzzleState)>(self, p: &Puzzle, mut consume: F) {
         let player_idx = (self.0 >> 27) as usize;
         let start = SquareSet(1 << p.piece_locs[player_idx]);
@@ -229,6 +254,8 @@ impl PuzzleState {
     }
 }
 
+/// Solves a puzzle, returning a list of piece indices to be captured in order to win, or returns
+/// `None` if no solution is possible.
 fn solve(p: &Puzzle) -> Option<Vec<u32>> {
     let mut predecessors = HashMap::<PuzzleState, (PuzzleState, u32)>::new();
     let mut frontier: HashSet<PuzzleState> = HashSet::<PuzzleState>::new();
