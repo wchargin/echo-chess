@@ -357,7 +357,8 @@ impl Puzzle {
     }
 }
 
-fn main() {
+#[allow(dead_code)]
+fn test_steps() {
     let start = SquareSet(0x8040201008040201);
     println!("start:\n{}", start.draw());
     println!("pawn steps:\n{}", Pawn::move_steps(start).draw());
@@ -375,90 +376,10 @@ fn main() {
     let start = SquareSet(0x4000_0000_0400_0000);
     println!("start:\n{}", start.draw());
     println!("knight steps:\n{}", Knight::move_steps(start).draw());
+}
 
-    let obstacle_locs = vec![
-        (0, 0),
-        (0, 4),
-        (0, 5),
-        (1, 1),
-        (1, 3),
-        (1, 5),
-        (3, 1),
-        (3, 3),
-        (3, 5),
-        (4, 0),
-        (4, 4),
-        (5, 0),
-        (5, 1),
-        (5, 2),
-        (5, 3),
-        (5, 5),
-    ];
-    let mut obstacles = SquareSet(0);
-    for &(y, x) in obstacle_locs.iter() {
-        let idx = 8 * (y + 1) + (x + 1);
-        obstacles = obstacles | SquareSet(1 << idx);
-    }
-    for x in 0..8 {
-        for y in 0..8 {
-            if x == 0 || x == 7 || y == 0 || y == 7 {
-                let idx = 8 * y + x;
-                obstacles = obstacles | SquareSet(1 << idx);
-            }
-        }
-    }
-    println!("obstacles:\n{}", obstacles.draw());
-
-    let mut piece_types = [None; 32];
-    {
-        use PieceType::*;
-        let pieces = [
-            Pawn, Knight, Pawn, Rook, Knight, Rook, Bishop, Pawn, Pawn, Rook, Knight, Bishop,
-        ];
-        for (i, pt) in pieces.into_iter().enumerate() {
-            piece_types[i] = Some(pt);
-        }
-    }
-    println!("piece types: {:?}", piece_types);
-
-    let mut piece_locs = [0xff; 32];
-    let mut pieces_by_loc = [0xff; 64];
-    {
-        let locs = [
-            (0, 1),
-            (0, 3),
-            (1, 0),
-            (1, 4),
-            (2, 0),
-            (2, 1),
-            (2, 2),
-            (3, 0),
-            (3, 2),
-            (4, 1),
-            (4, 2),
-            (4, 3),
-        ];
-        for (i, (y, x)) in locs.into_iter().enumerate() {
-            let loc = 8 * (y + 1) + (x + 1);
-            piece_locs[i] = loc as u8;
-            pieces_by_loc[loc] = i as u8;
-        }
-    }
-
-    println!("piece locs: {:?}", piece_locs);
-    println!("pieces by loc: {:?}", pieces_by_loc);
-
-    let player_start = 4;
-
-    let puz = Puzzle {
-        obstacles,
-        piece_types,
-        piece_locs,
-        pieces_by_loc,
-        player_start,
-    };
-
-    let puz_parsed = Puzzle::from_compound_fen(
+fn main() {
+    let puz = Puzzle::from_compound_fen(
         "\
         XXXXXXXX/\
         Xxxxx1xX/\
@@ -470,7 +391,6 @@ fn main() {
         XXXXXXXX\
         ",
     );
-    assert_eq!(puz, puz_parsed);
 
     println!("solving...");
     let start = std::time::Instant::now();
