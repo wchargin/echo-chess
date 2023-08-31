@@ -1,4 +1,7 @@
 struct Pawn;
+struct Bishop;
+struct Rook;
+struct Monarch;
 
 /// A subset of the squares on a chess board.
 ///
@@ -92,9 +95,44 @@ impl Stepper for Pawn {
     }
 }
 
+impl Stepper for Bishop {
+    fn move_steps(from: SquareSet) -> SquareSet {
+        let left = from & can_move::LEFT;
+        let right = from & can_move::RIGHT;
+        (left >> 9) | (right >> 7) | (left << 7) | (right << 9)
+    }
+    fn capture_steps(from: SquareSet) -> SquareSet {
+        Self::move_steps(from)
+    }
+}
+
+impl Stepper for Rook {
+    fn move_steps(from: SquareSet) -> SquareSet {
+        (from >> 8) | ((from & can_move::LEFT) >> 1) | ((from & can_move::RIGHT) << 1) | (from << 8)
+    }
+    fn capture_steps(from: SquareSet) -> SquareSet {
+        Self::move_steps(from)
+    }
+}
+
+impl Stepper for Monarch {
+    fn move_steps(from: SquareSet) -> SquareSet {
+        Rook::move_steps(from) | Bishop::move_steps(from)
+    }
+    fn capture_steps(from: SquareSet) -> SquareSet {
+        Self::move_steps(from)
+    }
+}
+
 fn main() {
     let start = SquareSet(0x8040201008040201);
     println!("start:\n{}", start.draw());
     println!("pawn steps:\n{}", Pawn::move_steps(start).draw());
     println!("pawn captures:\n{}", Pawn::capture_steps(start).draw());
+
+    let start = SquareSet(0x4000_0010_0000_0001);
+    println!("start:\n{}", start.draw());
+    println!("bishop steps:\n{}", Bishop::move_steps(start).draw());
+    println!("rook steps:\n{}", Rook::move_steps(start).draw());
+    println!("monarch steps:\n{}", Monarch::move_steps(start).draw());
 }
