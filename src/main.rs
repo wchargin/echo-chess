@@ -483,7 +483,7 @@ fn main() {
             let loc = puz.piece_locs[piece_idx as usize] as u32;
             let y = loc / 8;
             let x = loc % 8;
-            let loc_name = format!("{}{}", char::from_u32(u32::from('A') + x).unwrap(), y + 1);
+            let loc_name = format!("{}{}", char::from_u32(u32::from('a') + x).unwrap(), y + 1);
             println!("{:2}. capture {:?} on {}", i + 1, ty, loc_name);
         }
     }
