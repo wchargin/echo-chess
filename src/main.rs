@@ -83,7 +83,7 @@ mod can_move {
 
 impl Stepper for Pawn {
     fn move_steps(from: SquareSet) -> SquareSet {
-        SquareSet(from.0 << 8)
+        from << 8
     }
     fn capture_steps(from: SquareSet) -> SquareSet {
         ((from & can_move::LEFT) << 7) | ((from & can_move::RIGHT) << 9)
