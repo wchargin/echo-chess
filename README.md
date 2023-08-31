@@ -8,7 +8,7 @@ or SAT solver would be able to do a good job at it.
 
 So, I nerd-sniped myself into writing a quick solver. This is my literal first
 attempt (worked first try!), using naive breadth-first search, with no attempts
-at optimization. I haven't optimize it at all, but I did design it with
+at optimization. I haven't optimized it at all, but I did design it with
 performance in mind; hot types are kept in machine words (`u32`s), and
 available moves are computed using SIMD-in-a-register style arithmetic (see the
 `impl Stepper for _` blocks). I think that trick is pretty cool.
