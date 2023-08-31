@@ -13,26 +13,6 @@ struct Knight;
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 struct SquareSet(u64);
 
-impl SquareSet {
-    fn draw(self: SquareSet) -> String {
-        let mut res = String::new();
-        for y in (0..8).rev() {
-            res.push(char::from_u32('a' as u32 + y).unwrap());
-            res.push(' ');
-            for x in 0..8 {
-                if self.0 & (1 << (8 * y + x)) != 0 {
-                    res.push('*');
-                } else {
-                    res.push('.');
-                }
-            }
-            res.push('\n');
-        }
-        res.push_str("  12345678\n");
-        res
-    }
-}
-
 // Overloads for basic arithmetic on `SquareSet`s.
 impl std::ops::BitAnd<SquareSet> for SquareSet {
     type Output = SquareSet;
@@ -295,6 +275,26 @@ fn solve(p: &Puzzle) -> Option<Vec<u32>> {
 }
 
 // Everything below this point is shoddy frontend code :-)
+
+impl SquareSet {
+    fn draw(self: SquareSet) -> String {
+        let mut res = String::new();
+        for y in (0..8).rev() {
+            res.push(char::from_u32('a' as u32 + y).unwrap());
+            res.push(' ');
+            for x in 0..8 {
+                if self.0 & (1 << (8 * y + x)) != 0 {
+                    res.push('*');
+                } else {
+                    res.push('.');
+                }
+            }
+            res.push('\n');
+        }
+        res.push_str("  12345678\n");
+        res
+    }
+}
 
 impl Puzzle {
     /// Parses "compound FEN" (FEN but `X`/`x` is a boundary), or panics on invalid FEN.
