@@ -158,7 +158,7 @@ enum PieceType {
 struct Puzzle {
     /// Which squares have obstacles?
     obstacles: SquareSet,
-    /// Maps piece index (`0..27`) to piece type, or `0xff` if there is no such piece.
+    /// Maps piece index (`0..27`) to piece type, or `None` if there is no such piece.
     piece_types: [Option<PieceType>; 32],
     /// Maps piece index (`0..27`) to board square (`0..64`), or `0xff` if there is no such piece.
     piece_locs: [u8; 32],
