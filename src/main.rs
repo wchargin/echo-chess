@@ -76,14 +76,19 @@ fn captures<S: Stepper>(from: SquareSet, obstacles: SquareSet, targets: SquareSe
     S::capture_steps(reachable) & targets
 }
 
+mod can_move {
+    use super::SquareSet;
+
+    pub(crate) const LEFT: SquareSet = SquareSet(!0x0101010101010101);
+    pub(crate) const RIGHT: SquareSet = SquareSet(!0x8080808080808080);
+}
+
 impl Stepper for Pawn {
     fn move_steps(from: SquareSet) -> SquareSet {
         SquareSet(from.0 << 8)
     }
     fn capture_steps(from: SquareSet) -> SquareSet {
-        let to_left = from & SquareSet(0xfefefefefefefefe);
-        let to_right = from & SquareSet(0x7f7f7f7f7f7f7f7f);
-        (to_left << 7) | (to_right << 9)
+        ((from & can_move::LEFT) << 7) | ((from & can_move::RIGHT) << 9)
     }
 }
 
