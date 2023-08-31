@@ -2,6 +2,7 @@ struct Pawn;
 struct Bishop;
 struct Rook;
 struct Monarch;
+struct Knight;
 
 /// A subset of the squares on a chess board.
 ///
@@ -84,6 +85,8 @@ mod can_move {
 
     pub(crate) const LEFT: SquareSet = SquareSet(!0x0101010101010101);
     pub(crate) const RIGHT: SquareSet = SquareSet(!0x8080808080808080);
+    pub(crate) const TWO_LEFT: SquareSet = SquareSet(!0x0303030303030303);
+    pub(crate) const TWO_RIGHT: SquareSet = SquareSet(!0xc0c0c0c0c0c0c0c0);
 }
 
 impl Stepper for Pawn {
@@ -124,6 +127,26 @@ impl Stepper for Monarch {
     }
 }
 
+impl Stepper for Knight {
+    fn move_steps(from: SquareSet) -> SquareSet {
+        let left1 = from & can_move::LEFT;
+        let left2 = from & can_move::TWO_LEFT;
+        let right1 = from & can_move::RIGHT;
+        let right2 = from & can_move::TWO_RIGHT;
+        (left1 >> 17)
+            | (right1 >> 15)
+            | (left2 >> 10)
+            | (right2 >> 6)
+            | (left2 << 6)
+            | (right2 << 10)
+            | (left1 << 15)
+            | (right1 << 17)
+    }
+    fn capture_steps(from: SquareSet) -> SquareSet {
+        Self::move_steps(from)
+    }
+}
+
 fn main() {
     let start = SquareSet(0x8040201008040201);
     println!("start:\n{}", start.draw());
@@ -135,4 +158,11 @@ fn main() {
     println!("bishop steps:\n{}", Bishop::move_steps(start).draw());
     println!("rook steps:\n{}", Rook::move_steps(start).draw());
     println!("monarch steps:\n{}", Monarch::move_steps(start).draw());
+
+    let start = SquareSet(0x0000_0010_0000_0000);
+    println!("start:\n{}", start.draw());
+    println!("knight steps:\n{}", Knight::move_steps(start).draw());
+    let start = SquareSet(0x4000_0000_0400_0000);
+    println!("start:\n{}", start.draw());
+    println!("knight steps:\n{}", Knight::move_steps(start).draw());
 }
