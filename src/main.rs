@@ -160,7 +160,7 @@ impl Stepper for Knight {
 }
 
 #[repr(u8)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 enum PieceType {
     Pawn,
     Bishop,
@@ -174,7 +174,7 @@ enum PieceType {
 /// Pieces in this puzzle are indexed from 0 in order of ascending board location, in rank-major
 /// order. That is, piece A comes before piece B if it is either on a smaller rank (1 is smallest,
 /// 8 is largest), or on the same rank and a smaller file (A is smallest, H is largest).
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct Puzzle {
     /// Which squares have obstacles?
     obstacles: SquareSet,
@@ -294,6 +294,67 @@ fn solve(p: &Puzzle) -> Option<Vec<u32>> {
     None
 }
 
+impl Puzzle {
+    /// Parses "compound FEN" (FEN but `X`/`x` is a boundary), or panics on invalid FEN.
+    fn from_compound_fen(fen: &str) -> Puzzle {
+        let mut obstacles = SquareSet(0);
+        let mut piece_types_by_loc: [Option<PieceType>; 64] = [None; 64];
+        let mut player_loc = None;
+        let mut y = 7;
+        let mut x = 0;
+        for c in fen.chars() {
+            let loc = (8 * y + x) as usize;
+            use PieceType::*;
+            match c {
+                '/' => {
+                    y -= 1;
+                    x = 0;
+                    continue;
+                }
+                '0'..='9' => {
+                    x += c as u32 - '0' as u32;
+                    continue;
+                }
+                'X' | 'x' => {
+                    obstacles = obstacles | SquareSet(1 << loc);
+                }
+                'P' | 'p' => piece_types_by_loc[loc] = Some(Pawn),
+                'B' | 'b' => piece_types_by_loc[loc] = Some(Bishop),
+                'R' | 'r' => piece_types_by_loc[loc] = Some(Rook),
+                'N' | 'n' => piece_types_by_loc[loc] = Some(Knight),
+                'K' | 'k' | 'Q' | 'q' => piece_types_by_loc[loc] = Some(Monarch),
+                other => panic!("Unrecognized char in FEN: {:?}", other),
+            }
+            if matches!(c, 'P' | 'B' | 'R' | 'K' | 'Q' | 'N') {
+                player_loc = Some(loc);
+            }
+            x += 1;
+        }
+        let player_loc = player_loc.expect("No player location");
+        let mut pz = Puzzle {
+            obstacles,
+            piece_types: [None; 32],
+            piece_locs: [0xff; 32],
+            pieces_by_loc: [0xff; 64],
+            player_start: 0xff,
+        };
+        let mut piece_idx = 0;
+        for (loc, piece_type) in piece_types_by_loc.into_iter().enumerate() {
+            let Some(piece_type) = piece_type else {
+                continue
+            };
+            pz.piece_types[piece_idx] = Some(piece_type);
+            pz.piece_locs[piece_idx] = loc as u8;
+            pz.pieces_by_loc[loc] = piece_idx as u8;
+            if loc == player_loc {
+                pz.player_start = piece_idx as u32;
+            }
+            piece_idx += 1;
+        }
+        pz
+    }
+}
+
 fn main() {
     let start = SquareSet(0x8040201008040201);
     println!("start:\n{}", start.draw());
@@ -333,12 +394,12 @@ fn main() {
     ];
     let mut obstacles = SquareSet(0);
     for &(y, x) in obstacle_locs.iter() {
-        let idx = 8 * y + x;
+        let idx = 8 * (y + 1) + (x + 1);
         obstacles = obstacles | SquareSet(1 << idx);
     }
     for x in 0..8 {
         for y in 0..8 {
-            if x >= 6 || y >= 6 {
+            if x == 0 || x == 7 || y == 0 || y == 7 {
                 let idx = 8 * y + x;
                 obstacles = obstacles | SquareSet(1 << idx);
             }
@@ -376,7 +437,7 @@ fn main() {
             (4, 3),
         ];
         for (i, (y, x)) in locs.into_iter().enumerate() {
-            let loc = 8 * y + x;
+            let loc = 8 * (y + 1) + (x + 1);
             piece_locs[i] = loc as u8;
             pieces_by_loc[loc] = i as u8;
         }
@@ -395,9 +456,33 @@ fn main() {
         player_start,
     };
 
+    let puz_parsed = Puzzle::from_compound_fen(
+        "\
+        XXXXXXXX/\
+        Xxxxx1xX/\
+        Xxrnbx1X/\
+        Xpxpx1xX/\
+        XNrb3X/\
+        Xpx1xrxX/\
+        Xxp1nxxX/\
+        XXXXXXXX\
+        ",
+    );
+    assert_eq!(puz, puz_parsed);
+
     println!("solving...");
     let start = std::time::Instant::now();
     let sol = solve(&puz);
     let elapsed = start.elapsed();
     println!("done in {:?}. {:?}", elapsed, sol);
+    if let Some(moves) = sol {
+        for (i, &piece_idx) in moves.iter().enumerate() {
+            let ty = puz.piece_types[piece_idx as usize].unwrap();
+            let loc = puz.piece_locs[piece_idx as usize] as u32;
+            let y = loc / 8;
+            let x = loc % 8;
+            let loc_name = format!("{}{}", char::from_u32(u32::from('A') + x).unwrap(), y + 1);
+            println!("{:2}. capture {:?} on {}", i + 1, ty, loc_name);
+        }
+    }
 }
