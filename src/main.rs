@@ -294,6 +294,8 @@ fn solve(p: &Puzzle) -> Option<Vec<u32>> {
     None
 }
 
+// Everything below this point is shoddy frontend code :-)
+
 impl Puzzle {
     /// Parses "compound FEN" (FEN but `X`/`x` is a boundary), or panics on invalid FEN.
     fn from_compound_fen(fen: &str) -> Puzzle {
