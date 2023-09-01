@@ -243,9 +243,9 @@ impl PuzzleState {
 fn solve(p: &Puzzle) -> Option<Vec<u32>> {
     let mut predecessors: HashMap<PuzzleState, PuzzleState> = HashMap::new();
     let mut frontier: HashSet<PuzzleState> = HashSet::new();
+    let mut new_frontier: HashSet<PuzzleState> = HashSet::new();
     frontier.insert(PuzzleState::initial(p));
     while !frontier.is_empty() {
-        let mut new_frontier = HashSet::new();
         for &prev in frontier.iter() {
             let mut done = None;
             prev.next_states(p, |next| {
@@ -273,7 +273,8 @@ fn solve(p: &Puzzle) -> Option<Vec<u32>> {
                 return Some(res);
             }
         }
-        frontier = new_frontier;
+        frontier.clear();
+        std::mem::swap(&mut frontier, &mut new_frontier);
     }
     None
 }
