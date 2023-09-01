@@ -191,14 +191,18 @@ impl PuzzleState {
         self.remaining_captures() == 0
     }
 
+    pub fn current_piece_idx(self) -> u32 {
+        self.0 >> 27
+    }
+
     fn remaining_captures(self) -> u32 {
         self.0 & 0x07ffffff
     }
 
     /// Calls `consume(piece_idx, next_state)` for each successor state, where `piece_idx`
     /// (`0..27`) is the index of the piece that can be captured to move to `next_state`.
-    pub fn next_states<F: FnMut(u32, PuzzleState)>(self, p: &Puzzle, mut consume: F) {
-        let player_idx = (self.0 >> 27) as usize;
+    pub fn next_states<F: FnMut(PuzzleState)>(self, p: &Puzzle, mut consume: F) {
+        let player_idx = self.current_piece_idx() as usize;
         let start = SquareSet(1 << p.piece_locs[player_idx]);
         let obstacles = p.obstacles;
         let targets = {
@@ -228,7 +232,7 @@ impl PuzzleState {
             let piece_idx = u32::from(p.pieces_by_loc[i as usize]);
             let new_captures = self.remaining_captures() & !(1 << piece_idx);
             let new_state = Self(new_captures | (piece_idx << 27));
-            consume(piece_idx, new_state);
+            consume(new_state);
             captures &= captures - 1;
         }
     }
@@ -237,19 +241,19 @@ impl PuzzleState {
 /// Solves a puzzle, returning a list of piece indices to be captured in order to win, or returns
 /// `None` if no solution is possible.
 fn solve(p: &Puzzle) -> Option<Vec<u32>> {
-    let mut predecessors = HashMap::<PuzzleState, (PuzzleState, u32)>::new();
-    let mut frontier: HashSet<PuzzleState> = HashSet::<PuzzleState>::new();
+    let mut predecessors: HashMap<PuzzleState, PuzzleState> = HashMap::new();
+    let mut frontier: HashSet<PuzzleState> = HashSet::new();
     frontier.insert(PuzzleState::initial(p));
     while !frontier.is_empty() {
         let mut new_frontier = HashSet::new();
         for &prev in frontier.iter() {
             let mut done = None;
-            prev.next_states(p, |piece_idx, next| {
+            prev.next_states(p, |next| {
                 use std::collections::hash_map::Entry::*;
                 match predecessors.entry(next) {
                     Occupied(_) => (),
                     Vacant(slot) => {
-                        slot.insert((prev, piece_idx));
+                        slot.insert(prev);
                         new_frontier.insert(next);
                     }
                 }
@@ -261,8 +265,8 @@ fn solve(p: &Puzzle) -> Option<Vec<u32>> {
                 // unwind
                 let mut res = Vec::new();
                 let mut current = final_state;
-                while let Some(&(prev, piece_idx)) = predecessors.get(&current) {
-                    res.push(piece_idx);
+                while let Some(&prev) = predecessors.get(&current) {
+                    res.push(current.current_piece_idx());
                     current = prev;
                 }
                 res.reverse();
